@@ -1,0 +1,15 @@
+{
+    "name": "aruns/auto-alt",
+    "description": "WordPress plugin for adding default alt values to images uploaded to the Media Library.",
+    "type": "prct",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Arun James Sahadeo",
+            "email": "arunjamessahadeo@gmail.com"
+        }
+    ],
+    "require": {
+        "clarifai/clarifai-php": "^0.2.0"
+    }
+}
