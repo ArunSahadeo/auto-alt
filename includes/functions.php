@@ -25,8 +25,6 @@ function addDefaultAlt ($postID)
             $defaultAlt = '';
         }
 
-        error_log( "Default alt: $defaultAlt" );
-
         $imageMeta['post_title'] = $defaultAlt; 
         $imageMeta['post_excerpt'] = $defaultAlt; 
         $imageMeta['post_content'] = $defaultAlt; 
@@ -48,11 +46,19 @@ function fetchImageDefinition ($uploadImage)
     }
 
     $imageURI = $uploadImage->guid;
+    $slugParts;
 
     if ( !isset($imageURI) )
     {
         error_log( 'Image GUID not set!' );
         return;
+    }
+
+    $imageFileName = preg_replace('/\d/', '', $uploadImage->post_name);
+
+    if ( substr_count($imageFileName, '-') > 0 )
+    {
+        $slugParts = explode('-', $imageFileName);
     }
 
     $clarifai = new ClarifaiClient($clarifaiAPIKey);
@@ -64,10 +70,45 @@ function fetchImageDefinition ($uploadImage)
     if ( $clarifaiAPIResponse->isSuccessful() )
     {
         $clarifaiAPIOutput = $clarifaiAPIResponse->get();
+        $finalConcept = '';
         $concepts = $clarifaiAPIOutput->data();
-        $firstConcept = $concepts[0];
+
+        foreach ( $concepts as $index => $concept )
+        {
+            if ( isset($slugParts) )
+            {
+                $pattern = '/' . preg_quote($concept->name(), '/') . '/i'; 
+
+                if ( preg_grep($pattern, $slugParts) )
+                {
+                    $finalConcept = $concept->name();
+                    break;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            elseif ( substr_count($imageFileName, $concept->name()) > 0 )
+            {
+                $finalConcept = $concept->name();
+                break;
+            }
+            else
+            {
+                error_log("Current position: " . (intval($index) + 1));
+                if ( (intval($index) + 1) != count($concepts) )
+                {
+                    error_log("Not at end yet");
+                    continue;
+                }
+
+                $finalConcept = $concepts[0]->name();
+                break;
+            }
+        }
     
-        return $firstConcept->name();
+        return $finalConcept;
     }
 
     else
