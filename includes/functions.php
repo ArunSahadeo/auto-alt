@@ -22,7 +22,7 @@ function addDefaultAlt ($postID)
 
         if ( !isset($defaultAlt) )
         {
-            $defaultAlt = parseImageMetadata($uploadImage);
+            $defaultAlt = '';
         }
 
         error_log( "Default alt: $defaultAlt" );
@@ -135,10 +135,5 @@ function clarifaiErrors ()
     delete_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_eror_status');
     
     printf( '<div class="%1$s"><p>Error description: %2$s</p></div><div class="%1$s"><p>Error details: %3$s</p></div><div class="%1$s"><p>%4$s</p></div>', 'notice notice-error error-message notice-alt is-dismissible', $clarifaiErrorDescription, $clarifaiErrorDetails, $clarifaiErrorStatus);
-
-}
-
-function parseImageMetadata ($uploadImage)
-{
 
 }
