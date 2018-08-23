@@ -96,10 +96,8 @@ function fetchImageDefinition ($uploadImage)
             }
             else
             {
-                error_log("Current position: " . (intval($index) + 1));
                 if ( (intval($index) + 1) != count($concepts) )
                 {
-                    error_log("Not at end yet");
                     continue;
                 }
 
