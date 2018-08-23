@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 use Clarifai\API\ClarifaiClient;
-use Clarifai\DTOs\Inputs\ClarifaiURLImage;
+use Clarifai\DTOs\Inputs\ClarifaiFileImage;
 use Clarifai\DTOs\Outputs\ClarifaiOutput;
 use Clarifai\DTOs\Predictions\Concept;
 
@@ -39,11 +39,11 @@ function addDefaultAlt ($postID)
 
 function fetchImageDefinition ($uploadImage)
 {
-    $clarifaiAPIKey = get_option('apiKey');
+    $clarifaiAPIKey = get_option('api_key');
 
     if ( !isset($clarifaiAPIKey) )
     {
-        wp_send_json( 'Clarifai API key not set', 422 );
+        error_log( 'Clarifai API key not set' );
         return;
     }
 
@@ -51,22 +51,23 @@ function fetchImageDefinition ($uploadImage)
 
     if ( !isset($imageURI) )
     {
-        wp_send_json( 'Image GUID not set!', 422 );
+        error_log( 'Image GUID not set!' );
         return;
     }
 
     $clarifai = new ClarifaiClient($clarifaiAPIKey);
 
     $clarifaiAPIResponse = $clarifai->publicModels()->generalModel()->predict(
-        new ClarifaiURLImage($imageURI)   
+        new ClarifaiFileImage( file_get_contents($imageURI) ) 
     )->executeSync();
 
     if ( $clarifaiAPIResponse->isSuccessful() )
     {
         $clarifaiAPIOutput = $clarifaiAPIResponse->get();
-        $firstConcept = $clarifaiAPIOutput->data()[0];
+        $concepts = $clarifaiAPIOutput->data();
+        $firstConcept = $concepts[0];
     
-        return $firstConcept->name;
+        return $firstConcept->name();
     }
 
     else
@@ -77,15 +78,43 @@ function fetchImageDefinition ($uploadImage)
         set_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_error_details',
             __( $clarifaiAPIResponse->status()->errorDetails(), 'textdomain' )
         );
-        set_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_error_status',
-            __( $clarifaiAPIResponse->status()->statusCode(), 'textdomain' )
-        );
 
-        header('Location: ' . $_SERVER['REQUEST_URI']);
+        switch ( $clarifaiAPIResponse->status()->statusCode() )
+        {
+            case 10020:
+                set_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_error_status',
+                    __( 'This image has been previously uploaded to the WordPress Media Library and is being treated as a duplicate entry.', 'textdomain' )
+                );
+            break;
+
+            default:
+                set_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_error_status',
+                    __( 'Error status: ' . $clarifaiAPIResponse->status()->statusCode(), 'textdomain' )
+                );
+
+            break;
+        }
+
+        error_log('Error description: ' . $clarifaiAPIResponse->status()->description());
+        error_log('Error details: ' . $clarifaiAPIResponse->status()->errorDetails());
+        error_log('Error status: ' . $clarifaiAPIResponse->status()->statusCode());
+
+        $postID = url_to_postid( $_SERVER['REQUEST_URI'] );
+
+        if ( isset($postID) )
+        {
+            redirectToSelf( $postID );
+            return;
+        }
 
     }
 }
 
+function redirectToSelf ($postID)
+{
+    wp_redirect( $postID );
+    exit(); 
+}
 add_action( 'admin_notices', 'clarifaiErrors' );
 
 function clarifaiErrors ()
@@ -105,7 +134,7 @@ function clarifaiErrors ()
     delete_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_error_details');
     delete_transient(AUTO_ALT_PLUGIN_NAME . '_clarifai_eror_status');
     
-    printf( '<div class="%1$s"><p>Error description: %2$s</p></div><div class="%1$s"><p>Error details: %3$s</p></div><div class="%1$s"><p>Status is: %4$s</p></div>', 'notice notice-error error-message notice-alt is-dismissible', $clarifaiErrorDescription, $clarifaiErrorDetails, $clarifaiErrorStatus);
+    printf( '<div class="%1$s"><p>Error description: %2$s</p></div><div class="%1$s"><p>Error details: %3$s</p></div><div class="%1$s"><p>%4$s</p></div>', 'notice notice-error error-message notice-alt is-dismissible', $clarifaiErrorDescription, $clarifaiErrorDetails, $clarifaiErrorStatus);
 
 }
 
