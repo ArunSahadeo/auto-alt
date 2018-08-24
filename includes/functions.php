@@ -37,7 +37,7 @@ function addDefaultAlt ($postID)
 
 function fetchImageDefinition ($uploadImage)
 {
-    $clarifaiAPIKey = get_option('api_key');
+    $clarifaiAPIKey = get_option('clarifai_api_key');
 
     if ( !isset($clarifaiAPIKey) )
     {

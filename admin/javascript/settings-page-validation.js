@@ -16,7 +16,7 @@ function initApp ()
 
     self.form = form;
 
-    var input = document.getElementById('api_key');
+    var input = document.getElementById('clarifai_api_key');
     self.input = input;
 
     self.input.onchange = checkDynamicInput;
@@ -26,7 +26,7 @@ function initApp ()
 
 function checkDynamicInput ()
 {
-    var input = document.getElementById('api_key'),
+    var input = document.getElementById('clarifai_api_key'),
         pattern = /^[a-z0-9]+$/i,
         message = 'You are not entering a valid API key value'
     ;

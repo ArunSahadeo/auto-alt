@@ -1,15 +1,29 @@
 <?php
 
-function renderAPISettingsPage ()
+function renderClarifaiAPISettingsPage ()
 {
 
-    if ( isset($_POST['api_key']) )
+    if ( isset($_POST['clarifai_api_key']) )
     {
-        $value = $_POST['api_key'];
-        update_option('api_key', $value);
+        $value = $_POST['clarifai_api_key'];
+        update_option('clarifai_api_key', $value);
     }
 
-    $apiKey = get_option('api_key', '');
+    $clarifaiAPIKey = get_option('clarifai_api_key', '');
 
-    include plugin_dir_path(__FILE__) . '/templates/page-api-settings.php';
+    include plugin_dir_path(__FILE__) . '/templates/page-clarifai-api-settings.php';
+}
+
+function renderImageVisionAPISettingsPage ()
+{
+
+    if ( isset($_POST['imagevision_api_key']) )
+    {
+        $value = $_POST['imagevision_api_key'];
+        update_option('imagevision_api_key', $value);
+    }
+
+    $clarifaiAPIKey = get_option('imagevision_api_key', '');
+
+    include plugin_dir_path(__FILE__) . '/templates/page-imagevision-api-settings.php';
 }
