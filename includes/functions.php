@@ -239,13 +239,17 @@ function fetchText ($operationURI, $microsoftAPIKey)
 
     $apiResponse = json_decode( wp_remote_retrieve_body($response), true );
 
-    if ( array_key_exists('words', $apiResponse) )
+    error_log( print_r($apiResponse, TRUE) );
+
+    if ( isset($apiResponse['recognitionResult']['lines']['words']) )
     {
         $extractedKeyword;
-        $extractedKeywords = array_column( $apiResponse, 'words' );
+        $extractedKeywords = $apiResponse['recognitionResult']['lines']['words'];
 
         foreach ( $extractedKeywords as $keyword )
         {
+            $keyword = $keyword['text'];
+
             if ( in_array(strtolower($keyword), $stopwords) )
             {
                 continue;
