@@ -6,6 +6,10 @@ use Clarifai\DTOs\Inputs\ClarifaiFileImage;
 use Clarifai\DTOs\Outputs\ClarifaiOutput;
 use Clarifai\DTOs\Predictions\Concept;
 
+$stopwords = array(
+    "I'm",
+);
+
 add_action( 'add_attachment', 'addDefaultAlt' );
 
 function addDefaultAlt ($postID)
@@ -47,11 +51,18 @@ function fetchImageDefinition ($uploadImage)
 
     $imageURI = $uploadImage->guid;
     $slugParts;
+    $extractedText;
 
     if ( !isset($imageURI) )
     {
         error_log( 'Image GUID not set!' );
         return;
+    }
+
+    try {
+        $extractedText = extractImageText($imageURI);
+    } catch (Exception $e) {
+        wp_send_json('Error is: ' . $e->getMessage(), 400);
     }
 
     $imageFileName = preg_replace('/\d/', '', $uploadImage->post_name);
@@ -92,6 +103,11 @@ function fetchImageDefinition ($uploadImage)
             elseif ( substr_count($imageFileName, $concept->name()) > 0 )
             {
                 $finalConcept = $concept->name();
+                break;
+            }
+            elseif ( isset($extractedText) )
+            {
+                $finalConcept = $extractedText;
                 break;
             }
             else
@@ -147,6 +163,102 @@ function fetchImageDefinition ($uploadImage)
         }
 
     }
+}
+
+function extractImageText ($imageURI)
+{
+    $microsoftAPIKey = get_option('microsoftcognitiveservices_api_key'); 
+
+    if ( !isset($microsoftAPIKey) )
+    {
+        return;
+    }
+
+    $microsoftAPIEndpoint = '/recognizeText';
+    $reqParams = '?mode=Printed';
+    $microsoftAPIBase = MICROSOFT_REGION_DOMAIN . $microsoftAPIEndpoint . $reqParams;
+
+    $postArgs = array(
+        'headers'   => array(
+            'Content-Type'  => 'application/octet-stream',
+            'Ocp-Apim-Subscription-Key' => $microsoftAPIKey,
+        ),
+        'body'  => file_get_contents($imageURI)
+    );
+
+    $response = wp_safe_remote_post(
+        $microsoftAPIBase,
+        $postArgs
+    );
+
+    $responseStatus = wp_remote_retrieve_response_code( $response );
+    $responseMessage = wp_remote_retrieve_response_message( $response );
+
+    if ( !in_array($responseStatus, array(200, 201, 202)) )
+    {
+        error_log("The response code: $responseStatus");
+        error_log("The response message: $responseMessage");
+        return;
+    }
+
+    $operationLocation = wp_remote_retrieve_header($response, 'Operation-Location');
+
+    if ( !isset($operationLocation) )
+    {
+        return;
+    }
+
+    $extractedText = fetchText($operationLocation, $microsoftAPIKey);
+
+    return $extractedText;
+}
+
+function fetchText ($operationURI, $microsoftAPIKey)
+{
+    $args = array(
+        'headers'   => array(
+            'Content-Type'  => 'application/json',
+            'Ocp-Apim-Subscription-Key' => $microsoftAPIKey,
+        ),
+    );
+
+    $response = wp_remote_get(
+        $operationURI,
+        $args
+    );
+
+    $responseStatus = wp_remote_retrieve_response_code( $response );
+    $responseMessage = wp_remote_retrieve_response_message( $response );
+
+    if ( !in_array($responseStatus, array(200, 201, 202)) )
+    {
+        error_log("The response code: $responseStatus");
+        error_log("The response message: $responseMessage");
+        return;
+    }
+
+    $apiResponse = json_decode( wp_remote_retrieve_body($response), true );
+
+    if ( array_key_exists('words', $apiResponse) )
+    {
+        $extractedKeyword;
+        $extractedKeywords = array_column( $apiResponse, 'words' );
+
+        foreach ( $extractedKeywords as $keyword )
+        {
+            if ( in_array(strtolower($keyword), $stopwords) )
+            {
+                continue;
+            }
+
+            $extractedKeyword = $keyword;
+            break;
+        }
+
+        return $extractedKeyword;
+    }
+
+    return;
 }
 
 function redirectToSelf ($postID)

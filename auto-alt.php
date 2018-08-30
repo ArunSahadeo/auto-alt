@@ -20,4 +20,8 @@ define( 'AUTO_ALT_PLUGIN_NAME', trim(dirname(AUTO_ALT_PLUGIN_BASENAME)) );
 
 define( 'AUTO_ALT_PLUGIN_DIR', trim(dirname(AUTO_ALT_PLUGIN)) );
 
+define( 'MICROSOFT_REGION_NAME', 'West Central US' );
+
+define( 'MICROSOFT_REGION_DOMAIN', 'https://westcentralus.api.cognitive.microsoft.com/vision/v2.0' );
+
 require_once AUTO_ALT_PLUGIN_DIR . '/settings.php';
